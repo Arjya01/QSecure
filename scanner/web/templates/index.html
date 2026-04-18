@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Q-Secure | Quantum Readiness Scanner</title>
+<meta name="description" content="Multi-surface quantum cryptography readiness scanner for financial infrastructure. TLS, SSH, DNSSEC, Headers, CT Log, JWT, QUIC, and Subdomain analysis."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">⚛</div>
+      <div>
+        <div class="logo-title">Q-Secure</div>
+        <div class="logo-sub">Quantum Scanner v2.0</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">Mock Profiles</div>
+      <div id="profile-buttons"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">Scan Surfaces</div>
+      <div class="surface-toggles" id="surface-toggles">
+        <label class="toggle-item"><input type="checkbox" id="s-tls" checked/><span class="toggle-icon">🔒</span><span>TLS / Certificates</span></label>
+        <label class="toggle-item"><input type="checkbox" id="s-ssh" checked/><span class="toggle-icon">🔑</span><span>SSH (Port 22)</span></label>
+        <label class="toggle-item"><input type="checkbox" id="s-dnssec" checked/><span class="toggle-icon">🌐</span><span>DNSSEC</span></label>
+        <label class="toggle-item"><input type="checkbox" id="s-headers" checked/><span class="toggle-icon">📋</span><span>HTTP Headers</span></label>
+        <label class="toggle-item"><input type="checkbox" id="s-ct_log" checked/><span class="toggle-icon">📜</span><span>CT Log</span></label>
+        <label class="toggle-item"><input type="checkbox" id="s-jwt" checked/><span class="toggle-icon">🎫</span><span>JWT Detection</span></label>
+        <label class="toggle-item"><input type="checkbox" id="s-quic" checked/><span class="toggle-icon">⚡</span><span>QUIC / HTTP3</span></label>
+        <label class="toggle-item"><input type="checkbox" id="s-subdomains" checked/><span class="toggle-icon">🔍</span><span>Subdomains</span></label>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">Mode</div>
+      <label class="mode-toggle">
+        <input type="checkbox" id="mock-toggle" checked/>
+        <span class="mode-slider"></span>
+        <span class="mode-label" id="mode-label">Mock Mode ON</span>
+      </label>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main-content">
+    <div class="topbar">
+      <h1 class="page-title">Quantum Readiness Assessment</h1>
+      <div class="topbar-badge">Phase 2 — 8 Surfaces</div>
+    </div>
+
+    <!-- Scan Input -->
+    <div class="card scan-card">
+      <div class="scan-inputs">
+        <div class="input-group">
+          <label for="hostname-input">Hostname</label>
+          <input type="text" id="hostname-input" placeholder="e.g. pnbindia.in" autocomplete="off"/>
+        </div>
+        <div class="input-group input-group-sm">
+          <label for="port-input">Port</label>
+          <input type="number" id="port-input" value="443" min="1" max="65535"/>
+        </div>
+        <button class="btn-scan" id="scan-btn" onclick="runScan()">
+          <span id="scan-btn-text">▶ Scan</span>
+          <span id="scan-spinner" class="spinner hidden"></span>
+        </button>
+      </div>
+
+      <div class="batch-section">
+        <div class="batch-label">Batch Scan <span class="badge-muted">one hostname per line</span></div>
+        <textarea id="batch-input" placeholder="pnbindia.in&#10;netbanking.pnbindia.in&#10;api.pnbindia.in" rows="3"></textarea>
+        <button class="btn-batch" id="batch-btn" onclick="runBatchScan()">⚡ Batch Scan</button>
+      </div>
+
+      <div class="progress-bar-wrap hidden" id="progress-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+        <div class="progress-label" id="progress-label">Scanning...</div>
+      </div>
+    </div>
+
+    <!-- Domain Selector Bar (shown once any scan runs) -->
+    <div id="domain-selector" class="card domain-selector-bar hidden">
+      <div class="domain-bar-label">Domains</div>
+      <div class="domain-tabs-row" id="domain-tabs-bar"></div>
+      <button class="btn-compare hidden" id="compare-btn" onclick="toggleCompare()">⇄ Compare</button>
+    </div>
+
+    <!-- Compare Panel -->
+    <div id="compare-panel" class="card hidden">
+      <div class="card-title">⇄ Side-by-Side Comparison</div>
+      <div id="compare-table-wrap"></div>
+    </div>
+
+    <!-- Results -->
+    <div id="results-area" class="hidden">
+
+      <!-- Score Row -->
+      <div class="score-row">
+        <div class="gauge-card">
+          <svg class="gauge-svg" viewBox="0 0 200 120" id="gauge-svg">
+            <defs>
+              <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#dc143c"/>
+                <stop offset="50%" stop-color="#f5a623"/>
+                <stop offset="100%" stop-color="#22c55e"/>
+              </linearGradient>
+            </defs>
+            <path d="M 20 110 A 80 80 0 0 1 180 110" fill="none" stroke="#1e2433" stroke-width="16" stroke-linecap="round"/>
+            <path d="M 20 110 A 80 80 0 0 1 180 110" fill="none" stroke="url(#gauge-grad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="251" id="gauge-arc"/>
+            <text x="100" y="90" text-anchor="middle" class="gauge-score" id="gauge-score-text">--</text>
+            <text x="100" y="110" text-anchor="middle" class="gauge-label-text">Quantum Score</text>
+          </svg>
+        </div>
+
+        <div class="badge-stack">
+          <div class="pqc-badge" id="pqc-badge">---</div>
+          <div class="meta-badges">
+            <div class="meta-badge"><span class="meta-badge-label">Attack Surface</span><span class="meta-badge-val" id="surface-rating">---</span></div>
+            <div class="meta-badge"><span class="meta-badge-label">Cyber Rating</span><span class="meta-badge-val" id="cyber-rating">---</span></div>
+            <div class="meta-badge"><span class="meta-badge-label">Grade</span><span class="meta-badge-val" id="grade-badge">---</span></div>
+          </div>
+          <div class="target-info">
+            <div class="target-hostname" id="target-hostname">---</div>
+            <div class="target-meta" id="target-meta">---</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs-container">
+        <div class="tab-bar" id="tab-bar"></div>
+        <div class="tab-content" id="tab-content"></div>
+      </div>
+
+      <!-- Vulnerabilities -->
+      <div class="card" id="vulns-card">
+        <div class="card-title">⚠ Vulnerabilities</div>
+        <div id="vulns-list"></div>
+      </div>
+
+      <!-- CBOM -->
+      <div class="card" id="cbom-card">
+        <div class="card-title">📦 Cryptographic Bill of Materials (CBOM)</div>
+        <div class="table-wrap">
+          <table class="data-table" id="cbom-table">
+            <thead><tr><th>ID</th><th>Component</th><th>Type</th><th>Key Size</th><th>Quantum Risk</th><th>Replacement</th><th>FIPS Standard</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Raw JSON -->
+      <div class="card">
+        <div class="card-title collapsible-trigger" onclick="toggleRaw()">
+          <span>{ } Raw JSON</span>
+          <span id="raw-arrow">▼</span>
+          <button class="btn-export" onclick="event.stopPropagation();exportJSON()">⬇ Export JSON</button>
+        </div>
+        <div id="raw-json-wrap" class="hidden">
+          <pre id="raw-json" class="raw-json"></pre>
+        </div>
+      </div>
+
+    </div><!-- /results-area -->
+
+    <!-- Batch Results (legacy slot, logic moved to domain selector) -->
+    <div id="batch-results-area" class="hidden"></div>
+
+  </main>
+</div>
+
+<script>
+// ============================================================
+// State
+// ============================================================
+let _lastResult  = null;
+let _allResults  = {};       // hostname → result data
+let _activeDomain = null;
+let _compareMode  = false;
+let _currentTab   = 'overview';
+
+// ============================================================
+// Init
+// ============================================================
+async function init() {
+  try {
+    const res = await fetch('/mock-profiles');
+    const data = await res.json();
+    renderProfileButtons(data.profiles);
+  } catch(e) {
+    console.warn('Could not load profiles', e);
+  }
+  document.getElementById('mock-toggle').addEventListener('change', e => {
+    document.getElementById('mode-label').textContent = e.target.checked ? 'Mock Mode ON' : 'Live Mode';
+  });
+}
+
+// ============================================================
+// Domain Management
+// ============================================================
+function addResult(data) {
+  _allResults[data.target.hostname] = data;
+}
+
+function selectDomain(hostname) {
+  _activeDomain = hostname;
+  _lastResult   = _allResults[hostname];
+  updateDomainSelector();
+  renderResults(_allResults[hostname]);
+}
+
+function updateDomainSelector() {
+  const domains = Object.keys(_allResults);
+  const sel = document.getElementById('domain-selector');
+  const compareBtn = document.getElementById('compare-btn');
+  if (!domains.length) { sel.classList.add('hidden'); return; }
+  sel.classList.remove('hidden');
+  // Compare button visible only with 2+ domains
+  compareBtn.classList.toggle('hidden', domains.length < 2);
+  document.getElementById('domain-tabs-bar').innerHTML = domains.map(h => {
+    const r = _allResults[h];
+    const score = r.quantum_score?.overall_score ?? 0;
+    const grade = r.quantum_score?.grade || '?';
+    const active = h === _activeDomain ? 'active' : '';
+    return `<button class="domain-tab-btn ${active}" onclick="selectDomain('${h}')">
+      <span class="domain-tab-score" style="color:${scoreColor(score)}">${Math.round(score)}</span>
+      <span class="domain-tab-name">${h}</span>
+      <span class="domain-tab-grade">${grade}</span>
+    </button>`;
+  }).join('');
+  // Keep compare table in sync
+  if (_compareMode) renderCompareTable();
+}
+
+function toggleCompare() {
+  _compareMode = !_compareMode;
+  const panel = document.getElementById('compare-panel');
+  const btn   = document.getElementById('compare-btn');
+  panel.classList.toggle('hidden', !_compareMode);
+  btn.textContent = _compareMode ? '✕ Close Compare' : '⇄ Compare';
+  if (_compareMode) renderCompareTable();
+}
+
+function renderCompareTable() {
+  const domains = Object.keys(_allResults);
+  const metrics = [
+    { section: true, label: 'Quantum Score' },
+    { label: 'Overall Score',      fn: r => `${Math.round(r.quantum_score?.overall_score ?? 0)} / 100` },
+    { label: 'Grade',              fn: r => r.quantum_score?.grade || '?' },
+    { label: 'Cyber Rating',       fn: r => `${Math.round(r.quantum_score?.cyber_rating ?? 0)} / 1000` },
+    { label: 'Quantum Label',      fn: r => (r.quantum_score?.label || '?').replace(/_/g, ' ') },
+    { label: 'Attack Surface',     fn: r => r.attack_surface_rating || '?' },
+    { label: 'Migration Urgency',  fn: r => r.quantum_score?.migration_urgency || '?' },
+    { section: true, label: 'TLS' },
+    { label: 'TLS 1.3 Supported',  fn: r => r.tls_versions?.find(v => v.version === 'TLSv1.3' && v.supported) ? '✅ Yes' : '❌ No' },
+    { label: 'Insecure Protocols', fn: r => r.tls_versions?.some(v => v.is_insecure && v.supported) ? '⚠️ Yes' : '✅ None' },
+    { label: 'Negotiated Version', fn: r => r.negotiated_tls_version || '?' },
+    { section: true, label: 'Certificate & Key Exchange' },
+    { label: 'Cert Algorithm',     fn: r => r.certificate ? `${r.certificate.public_key_algorithm} ${r.certificate.public_key_size}b` : '—' },
+    { label: 'Cert Expired',       fn: r => r.certificate ? (r.certificate.is_expired ? '⚠️ Expired' : '✅ Valid') : '—' },
+    { label: 'Self-Signed',        fn: r => r.certificate ? (r.certificate.is_self_signed ? '⚠️ Yes' : '✅ No') : '—' },
+    { label: 'Quantum-Safe Cert',  fn: r => r.certificate ? (r.certificate.is_quantum_safe_cert ? '✅ Yes' : '❌ No') : '—' },
+    { label: 'Post-Quantum KEX',   fn: r => r.key_exchange ? (r.key_exchange.is_post_quantum ? '✅ Yes' : '❌ No') : '—' },
+    { label: 'KEX Algorithm',      fn: r => r.key_exchange?.algorithm || '—' },
+    { section: true, label: 'Infrastructure' },
+    { label: 'DNSSEC',             fn: r => r.dnssec_result ? (r.dnssec_result.enabled ? '✅ Enabled' : '❌ Disabled') : '—' },
+    { label: 'DNSSEC Algorithm',   fn: r => r.dnssec_result?.dnskey_algorithm || '—' },
+    { label: 'SSH Risk',           fn: r => r.ssh_result?.overall_risk || '—' },
+    { label: 'QUIC / HTTP3',       fn: r => r.quic_result ? (r.quic_result.h3_advertised ? '⚡ Yes' : 'No') : '—' },
+    { section: true, label: 'Web Security' },
+    { label: 'Headers Score',      fn: r => r.headers_result ? `${r.headers_result.security_score} / 100` : '—' },
+    { label: 'HSTS',               fn: r => r.headers_result ? (r.headers_result.hsts_enabled ? '✅ Yes' : '❌ No') : '—' },
+    { label: 'CSP',                fn: r => r.headers_result ? (r.headers_result.csp_present ? '✅ Yes' : '❌ No') : '—' },
+    { label: 'CT Log Flagged',     fn: r => r.ct_log_result ? (r.ct_log_result.flagged ? '⚠️ Yes' : '✅ Clean') : '—' },
+    { label: 'Total CT Certs',     fn: r => r.ct_log_result?.total_certs_found ?? '—' },
+    { section: true, label: 'Subdomains & Auth' },
+    { label: 'Subdomains Found',   fn: r => r.subdomains?.length ?? 0 },
+    { label: 'Weak TLS Subdomains',fn: r => r.subdomains?.filter(s => s.tls_weak).length ?? 0 },
+    { label: 'JWTs Detected',      fn: r => r.jwt_result?.jwts_found?.length ?? 0 },
+    { section: true, label: 'Summary' },
+    { label: 'Vulnerabilities',    fn: r => r.vulnerabilities?.length ?? 0 },
+    { label: 'CBOM Entries',       fn: r => r.cbom?.length ?? 0 },
+    { label: 'Scanner Version',    fn: r => r.scanner_version || '—' },
+  ];
+
+  const headerCols = domains.map(h => `<th class="domain-col">${h}</th>`).join('');
+  const rows = metrics.map(m => {
+    if (m.section) {
+      return `<tr class="section-row"><td colspan="${1 + domains.length}">${m.label}</td></tr>`;
+    }
+    const cells = domains.map(h => `<td class="domain-val">${m.fn(_allResults[h])}</td>`).join('');
+    return `<tr><td class="muted small">${m.label}</td>${cells}</tr>`;
+  }).join('');
+
+  document.getElementById('compare-table-wrap').innerHTML = `
+    <div class="compare-table-wrap">
+      <table class="compare-table">
+        <thead><tr><th>Metric</th>${headerCols}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderProfileButtons(profiles) {
+  const el = document.getElementById('profile-buttons');
+  el.innerHTML = profiles.map(p => `
+    <button class="profile-btn" onclick="loadProfile('${p.hostname}')" title="${p.hostname}">
+      <span class="profile-name">${p.label}</span>
+      <span class="profile-host">${p.hostname}</span>
+    </button>`).join('');
+}
+
+function loadProfile(hostname) {
+  document.getElementById('hostname-input').value = hostname;
+  document.getElementById('mock-toggle').checked = true;
+  document.getElementById('mode-label').textContent = 'Mock Mode ON';
+  runScan();
+}
+
+// ============================================================
+// Surfaces
+// ============================================================
+function getSurfaces() {
+  const names = ['tls','ssh','dnssec','headers','ct_log','jwt','quic','subdomains'];
+  const obj = {};
+  names.forEach(n => { obj[n] = document.getElementById('s-'+n).checked; });
+  return obj;
+}
+
+// ============================================================
+// Scan
+// ============================================================
+async function runScan() {
+  const hostname = document.getElementById('hostname-input').value.trim();
+  if (!hostname) { alert('Enter a hostname'); return; }
+  const port = parseInt(document.getElementById('port-input').value) || 443;
+  const mock = document.getElementById('mock-toggle').checked;
+
+  setScanLoading(true);
+
+  try {
+    const res = await fetch('/scan', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({hostname, port, mock, surfaces: getSurfaces()})
+    });
+    const data = await res.json();
+    if (data.error) { showError(data.error); return; }
+    addResult(data);
+    selectDomain(data.target.hostname);
+  } catch(e) {
+    showError(e.message);
+  } finally {
+    setScanLoading(false);
+  }
+}
+
+async function runBatchScan() {
+  const raw = document.getElementById('batch-input').value.trim();
+  if (!raw) { alert('Enter hostnames for batch scan'); return; }
+  const hostnames = raw.split('\n').map(h=>h.trim()).filter(Boolean);
+  const port = parseInt(document.getElementById('port-input').value) || 443;
+  const mock = document.getElementById('mock-toggle').checked;
+
+  setBatchLoading(true);
+
+  try {
+    const res = await fetch('/batch-scan', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({hostnames, port, mock, surfaces: getSurfaces()})
+    });
+    const data = await res.json();
+    if (data.error) { showError(data.error); return; }
+    data.results.forEach(r => addResult(r));
+    const firstHost = data.results[0]?.target?.hostname;
+    if (firstHost) selectDomain(firstHost);
+    // Auto-open compare panel when 2+ domains scanned
+    if (data.results.length >= 2 && !_compareMode) toggleCompare();
+  } catch(e) {
+    showError(e.message);
+  } finally {
+    setBatchLoading(false);
+  }
+}
+
+// ============================================================
+// Loading states
+// ============================================================
+function setScanLoading(on) {
+  document.getElementById('scan-btn-text').textContent = on ? 'Scanning…' : '▶ Scan';
+  document.getElementById('scan-spinner').classList.toggle('hidden', !on);
+  document.getElementById('scan-btn').disabled = on;
+  document.getElementById('progress-wrap').classList.toggle('hidden', !on);
+  if (on) animateProgress();
+}
+function setBatchLoading(on) {
+  document.getElementById('batch-btn').textContent = on ? '⏳ Scanning…' : '⚡ Batch Scan';
+  document.getElementById('batch-btn').disabled = on;
+}
+let _progressInterval = null;
+function animateProgress() {
+  const bar = document.getElementById('progress-bar');
+  const lbl = document.getElementById('progress-label');
+  const steps = ['Initialising…','TLS handshake…','Checking SSH…','DNSSEC lookup…','Scanning headers…','CT log query…','JWT detection…','QUIC probe…','Subdomain enum…','Analysing…'];
+  let i = 0, pct = 0;
+  bar.style.width = '0%';
+  clearInterval(_progressInterval);
+  _progressInterval = setInterval(() => {
+    pct = Math.min(95, pct + Math.random()*12);
+    bar.style.width = pct + '%';
+    lbl.textContent = steps[i++ % steps.length];
+    if (pct >= 95) clearInterval(_progressInterval);
+  }, 700);
+}
+
+// ============================================================
+// Render main results
+// ============================================================
+function renderResults(d) {
+  document.getElementById('results-area').classList.remove('hidden');
+  document.getElementById('progress-wrap').classList.add('hidden');
+  clearInterval(_progressInterval);
+
+  renderGauge(d);
+  renderBadges(d);
+  renderTabs(d);
+  renderVulns(d);
+  renderCBOM(d);
+  document.getElementById('raw-json').textContent = JSON.stringify(d, null, 2);
+  document.getElementById('results-area').scrollIntoView({behavior:'smooth'});
+}
+
+// Gauge
+function renderGauge(d) {
+  const score = d.quantum_score?.overall_score ?? 0;
+  const arc = document.getElementById('gauge-arc');
+  const txt = document.getElementById('gauge-score-text');
+  const total = 251;
+  const offset = total - (score / 100) * total;
+  arc.style.transition = 'stroke-dashoffset 1.2s ease';
+  arc.setAttribute('stroke-dashoffset', offset);
+  txt.textContent = Math.round(score);
+  txt.setAttribute('fill', scoreColor(score));
+}
+
+function scoreColor(s) {
+  if (s >= 80) return '#22c55e';
+  if (s >= 55) return '#f5a623';
+  if (s >= 30) return '#ef4444';
+  return '#dc143c';
+}
+
+// Badges
+function renderBadges(d) {
+  const label = d.quantum_score?.label || 'UNKNOWN';
+  const badge = document.getElementById('pqc-badge');
+  badge.textContent = label.replace(/_/g,' ');
+  badge.className = 'pqc-badge pqc-' + label.toLowerCase();
+
+  const rating = d.attack_surface_rating || 'UNKNOWN';
+  const ratingEl = document.getElementById('surface-rating');
+  ratingEl.textContent = rating;
+  ratingEl.className = 'meta-badge-val risk-' + rating.toLowerCase();
+
+  document.getElementById('cyber-rating').textContent = Math.round(d.quantum_score?.cyber_rating ?? 0) + ' / 1000';
+  document.getElementById('grade-badge').textContent = d.quantum_score?.grade || '--';
+
+  const t = d.target;
+  document.getElementById('target-hostname').textContent = t.hostname + ':' + t.port;
+  document.getElementById('target-meta').textContent = [t.label, ...(t.tags||[])].filter(Boolean).join(' · ');
+}
+
+// ============================================================
+// Tabs
+// ============================================================
+const TAB_DEFS = [
+  {id:'overview',   icon:'📊', label:'Overview'},
+  {id:'tls',        icon:'🔒', label:'TLS'},
+  {id:'ssh',        icon:'🔑', label:'SSH'},
+  {id:'dnssec',     icon:'🌐', label:'DNSSEC'},
+  {id:'headers',    icon:'📋', label:'Headers'},
+  {id:'ct_log',     icon:'📜', label:'CT Log'},
+  {id:'jwt',        icon:'🎫', label:'JWT'},
+  {id:'quic',       icon:'⚡', label:'QUIC'},
+  {id:'subdomains', icon:'🔍', label:'Subdomains'},
+];
+
+function renderTabs(d) {
+  const bar = document.getElementById('tab-bar');
+  bar.innerHTML = TAB_DEFS.map(t =>
+    `<button class="tab-btn ${_currentTab===t.id?'active':''}" id="tab-${t.id}" onclick="switchTab('${t.id}',this)">${t.icon} ${t.label}</button>`
+  ).join('');
+  renderTabContent(_currentTab, d);
+}
+
+function switchTab(id, btn) {
+  _currentTab = id;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTabContent(id, _lastResult);
+}
+
+function renderTabContent(id, d) {
+  const el = document.getElementById('tab-content');
+  switch(id) {
+    case 'overview':   el.innerHTML = renderOverview(d); break;
+    case 'tls':        el.innerHTML = renderTLS(d); break;
+    case 'ssh':        el.innerHTML = renderSSH(d); break;
+    case 'dnssec':     el.innerHTML = renderDNSSEC(d); break;
+    case 'headers':    el.innerHTML = renderHeaders(d); break;
+    case 'ct_log':     el.innerHTML = renderCTLog(d); break;
+    case 'jwt':        el.innerHTML = renderJWT(d); break;
+    case 'quic':       el.innerHTML = renderQUIC(d); break;
+    case 'subdomains': el.innerHTML = renderSubdomains(d); break;
+  }
+}
+
+// ---- Overview Tab ----
+function renderOverview(d) {
+  // Score breakdown
+  const qs = d.quantum_score;
+  const scoreBreakdown = qs ? `
+    <div class="overview-category overview-full-width">
+      <div class="overview-cat-title">Score Breakdown — ${qs.summary}</div>
+      <div class="score-breakdown">
+        ${[
+          ['TLS Version Quality',    qs.tls_version_score,          20],
+          ['Cipher Suite Quality',   qs.cipher_quality_score,       25],
+          ['Certificate Strength',   qs.certificate_strength_score, 25],
+          ['Key Exchange Strength',  qs.key_exchange_score,         30],
+        ].map(([lbl, sc, wt]) => {
+          const fill = sc >= 80 ? '#22c55e' : sc >= 50 ? '#f5c842' : sc >= 30 ? '#ff7a00' : '#ff2244';
+          return `<div class="score-bar-row">
+            <div class="score-bar-label">${lbl} <span class="score-bar-weight">(${wt}%)</span></div>
+            <div class="score-bar-track"><div class="score-bar-fill" style="width:${sc}%;background:${fill}"></div></div>
+            <div class="score-bar-val" style="color:${fill}">${Math.round(sc)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+  // Build checks
+  const checks = [];
+
+  // — TLS —
+  const tlsVersions = d.tls_versions || [];
+  const hasTLS13  = tlsVersions.find(v => v.version === 'TLSv1.3' && v.supported);
+  const hasTLS12  = tlsVersions.find(v => v.version === 'TLSv1.2' && v.supported);
+  const hasInsec  = tlsVersions.filter(v => v.is_insecure && v.supported);
+  checks.push({ cat:'TLS', label:'TLS 1.3 Supported',        status: hasTLS13 ? 'pass' : 'warn', detail: hasTLS13 ? 'Active' : 'Not detected' });
+  checks.push({ cat:'TLS', label:'TLS 1.2 Available',        status: hasTLS12 ? 'pass' : 'warn', detail: hasTLS12 ? 'Yes' : 'No' });
+  checks.push({ cat:'TLS', label:'Insecure Protocols Absent', status: hasInsec.length ? 'fail' : 'pass', detail: hasInsec.length ? hasInsec.map(v=>v.version).join(', ') : 'None enabled' });
+
+  const negotiated = d.negotiated_tls_version;
+  if (negotiated) checks.push({ cat:'TLS', label:'Negotiated Version', status: 'info', detail: negotiated });
+
+  // — Ciphers —
+  const vulnCiphers = (d.ciphers || []).filter(c => c.is_quantum_vulnerable);
+  const safeCiphers = (d.ciphers || []).filter(c => !c.is_quantum_vulnerable);
+  if (d.ciphers?.length) {
+    checks.push({ cat:'TLS', label:'Quantum-Vulnerable Ciphers', status: vulnCiphers.length ? 'fail' : 'pass', detail: `${vulnCiphers.length} of ${d.ciphers.length}` });
+    checks.push({ cat:'TLS', label:'Forward-Secret Ciphers',     status: safeCiphers.length ? 'pass' : 'warn', detail: `${(d.ciphers||[]).filter(c=>c.is_forward_secret).length} of ${d.ciphers.length}` });
+  }
+
+  // — Certificate —
+  const cert = d.certificate;
+  if (cert) {
+    checks.push({ cat:'Certificate', label:'Certificate Valid',       status: cert.is_expired ? 'fail' : 'pass',             detail: cert.is_expired ? 'EXPIRED' : 'Valid' });
+    checks.push({ cat:'Certificate', label:'Not Self-Signed',         status: cert.is_self_signed ? 'fail' : 'pass',         detail: cert.is_self_signed ? 'Self-signed' : 'CA-signed' });
+    checks.push({ cat:'Certificate', label:'Chain Valid',             status: cert.chain_valid ? 'pass' : 'warn',            detail: cert.chain_valid ? 'Yes' : 'No' });
+    checks.push({ cat:'Certificate', label:'Public Key Algorithm',    status: cert.is_quantum_safe_cert ? 'pass' : 'fail',   detail: `${cert.public_key_algorithm} ${cert.public_key_size}b` });
+    checks.push({ cat:'Certificate', label:'Quantum-Safe Cert',       status: cert.is_quantum_safe_cert ? 'pass' : 'fail',   detail: cert.is_quantum_safe_cert ? 'Yes' : 'No' });
+    checks.push({ cat:'Certificate', label:'Signature Algorithm',     status: 'info',                                        detail: cert.signature_algorithm || '?' });
+    if (cert.nist_standard) checks.push({ cat:'Certificate', label:'NIST Standard', status:'pass', detail: cert.nist_standard });
+  }
+
+  // — Key Exchange —
+  const kex = d.key_exchange;
+  if (kex) {
+    checks.push({ cat:'Key Exchange', label:'Post-Quantum KEX',   status: kex.is_post_quantum ? 'pass' : 'fail', detail: kex.algorithm });
+    checks.push({ cat:'Key Exchange', label:'Key Size',           status: kex.key_size >= 2048 ? 'pass' : 'warn', detail: `${kex.key_size} bits` });
+    checks.push({ cat:'Key Exchange', label:'Quantum Risk Level', status: kex.quantum_risk === 'NONE' || kex.quantum_risk === 'LOW' ? 'pass' : kex.quantum_risk === 'MEDIUM' ? 'warn' : 'fail', detail: kex.quantum_risk });
+    if (kex.nist_standard) checks.push({ cat:'Key Exchange', label:'NIST Standard', status:'pass', detail: kex.nist_standard });
+  }
+
+  // — SSH —
+  const ssh = d.ssh_result;
+  if (ssh) {
+    const rsk = ssh.overall_risk;
+    checks.push({ cat:'SSH', label:'Overall Risk',             status: rsk === 'NONE' || rsk === 'LOW' ? 'pass' : rsk === 'MEDIUM' ? 'warn' : 'fail', detail: rsk });
+    const pqHK = ssh.host_key_algorithms?.filter(a => a.quantum_risk === 'NONE' || a.quantum_risk === 'LOW');
+    checks.push({ cat:'SSH', label:'Host Key Algorithms',      status: pqHK?.length ? 'pass' : 'fail', detail: `${pqHK?.length||0} safe of ${ssh.host_key_algorithms?.length||0}` });
+    const pqKex = ssh.kex_algorithms?.filter(a => a.quantum_risk === 'NONE' || a.quantum_risk === 'LOW');
+    checks.push({ cat:'SSH', label:'KEX Algorithms',           status: pqKex?.length ? 'pass' : 'fail', detail: `${pqKex?.length||0} safe of ${ssh.kex_algorithms?.length||0}` });
+    if (ssh.server_banner) checks.push({ cat:'SSH', label:'Server Banner', status:'info', detail: ssh.server_banner });
+  }
+
+  // — DNSSEC —
+  const dns = d.dnssec_result;
+  if (dns) {
+    checks.push({ cat:'DNSSEC', label:'DNSSEC Enabled',              status: dns.enabled ? 'pass' : 'fail',                    detail: dns.enabled ? 'Enabled' : 'Disabled' });
+    checks.push({ cat:'DNSSEC', label:'Chain Valid',                 status: dns.chain_valid ? 'pass' : (dns.enabled ? 'fail' : 'info'), detail: dns.chain_valid ? 'Valid' : (dns.enabled ? 'Invalid' : 'N/A') });
+    checks.push({ cat:'DNSSEC', label:'DS Record Found',             status: dns.ds_record_found ? 'pass' : (dns.enabled ? 'fail' : 'info'), detail: dns.ds_record_found ? 'Found' : 'Missing' });
+    checks.push({ cat:'DNSSEC', label:'RRSIG Present',               status: dns.rrsig_found ? 'pass' : (dns.enabled ? 'fail' : 'info'), detail: dns.rrsig_found ? 'Yes' : 'No' });
+    if (dns.dnskey_algorithm) {
+      checks.push({ cat:'DNSSEC', label:'DNSKEY Algorithm', status: dns.dnskey_algorithm_safe ? 'pass' : 'warn', detail: dns.dnskey_algorithm });
+    }
+    checks.push({ cat:'DNSSEC', label:'Quantum Risk', status: dns.quantum_risk === 'NONE' || dns.quantum_risk === 'LOW' ? 'pass' : dns.quantum_risk === 'MEDIUM' ? 'warn' : 'fail', detail: dns.quantum_risk });
+  }
+
+  // — HTTP Headers —
+  const hdr = d.headers_result;
+  if (hdr) {
+    const s = hdr.security_score;
+    checks.push({ cat:'HTTP Headers', label:'Security Score',         status: s >= 80 ? 'pass' : s >= 50 ? 'warn' : 'fail', detail: `${s} / 100` });
+    checks.push({ cat:'HTTP Headers', label:'HSTS',                   status: hdr.hsts_enabled ? 'pass' : 'fail',           detail: hdr.hsts_enabled ? `max-age ${hdr.hsts_max_age}` : 'Missing' });
+    checks.push({ cat:'HTTP Headers', label:'HSTS Preload',           status: hdr.hsts_preload ? 'pass' : 'warn',           detail: hdr.hsts_preload ? 'Yes' : 'No' });
+    checks.push({ cat:'HTTP Headers', label:'Content Security Policy',status: hdr.csp_present ? 'pass' : 'warn',            detail: hdr.csp_present ? 'Present' : 'Missing' });
+    checks.push({ cat:'HTTP Headers', label:'X-Frame-Options',        status: hdr.x_frame_options ? 'pass' : 'warn',        detail: hdr.x_frame_options || 'Missing' });
+    checks.push({ cat:'HTTP Headers', label:'X-Content-Type-Options', status: hdr.x_content_type_options ? 'pass' : 'warn', detail: hdr.x_content_type_options ? 'nosniff' : 'Missing' });
+    checks.push({ cat:'HTTP Headers', label:'Permissions-Policy',     status: hdr.permissions_policy ? 'pass' : 'warn',     detail: hdr.permissions_policy ? 'Present' : 'Missing' });
+  }
+
+  // — CT Log —
+  const ct = d.ct_log_result;
+  if (ct) {
+    checks.push({ cat:'CT Log', label:'Log Status',              status: ct.flagged ? 'fail' : 'pass',                           detail: ct.flagged ? ct.flag_reason : 'Clean' });
+    checks.push({ cat:'CT Log', label:'Total Certs Found',       status: 'info',                                                  detail: `${ct.total_certs_found}` });
+    checks.push({ cat:'CT Log', label:'Recent Certs (30d)',      status: ct.recent_certs_count > 3 ? 'warn' : 'pass',             detail: `${ct.recent_certs_count}` });
+    checks.push({ cat:'CT Log', label:'Unexpected CAs',         status: ct.unexpected_cas?.length ? 'fail' : 'pass',             detail: ct.unexpected_cas?.length ? ct.unexpected_cas.join(', ') : 'None' });
+  }
+
+  // — JWT —
+  const jwt = d.jwt_result;
+  if (jwt) {
+    const vulnJWT = jwt.jwts_found?.filter(j => j.quantum_risk === 'HIGH' || j.quantum_risk === 'CRITICAL') || [];
+    checks.push({ cat:'JWT', label:'JWTs Detected',             status: jwt.jwts_found?.length ? 'warn' : 'pass',  detail: jwt.jwts_found?.length ? `${jwt.jwts_found.length} found` : 'None' });
+    if (jwt.jwts_found?.length) {
+      checks.push({ cat:'JWT', label:'Quantum-Vulnerable Algorithms', status: vulnJWT.length ? 'fail' : 'pass',   detail: vulnJWT.length ? vulnJWT.map(j=>j.algorithm).join(', ') : 'None' });
+      checks.push({ cat:'JWT', label:'Overall JWT Risk',              status: jwt.overall_risk === 'NONE' ? 'pass' : jwt.overall_risk === 'LOW' || jwt.overall_risk === 'MEDIUM' ? 'warn' : 'fail', detail: jwt.overall_risk });
+    }
+  }
+
+  // — QUIC —
+  const quic = d.quic_result;
+  if (quic) {
+    checks.push({ cat:'QUIC / HTTP3', label:'HTTP/3 Advertised',  status: quic.h3_advertised ? 'warn' : 'pass', detail: quic.h3_advertised ? quic.alt_svc_value || 'Yes' : 'No' });
+    checks.push({ cat:'QUIC / HTTP3', label:'UDP 443 Response',   status: quic.quic_detected_udp ? 'warn' : 'pass', detail: quic.quic_detected_udp ? 'Detected' : 'No response' });
+    checks.push({ cat:'QUIC / HTTP3', label:'TLS Coverage',       status: quic.flagged ? 'warn' : 'pass', detail: quic.flagged ? 'QUIC not covered by TCP TLS scan' : 'Full coverage' });
+    if (quic.versions_advertised?.length) {
+      checks.push({ cat:'QUIC / HTTP3', label:'QUIC Versions', status:'info', detail: quic.versions_advertised.join(', ') });
+    }
+  }
+
+  // — Subdomains —
+  const subs = d.subdomains || [];
+  if (subs.length) {
+    const live  = subs.filter(s => s.is_live).length;
+    const weak  = subs.filter(s => s.tls_weak).length;
+    checks.push({ cat:'Subdomains', label:'Subdomains Discovered', status:'info',                      detail: `${subs.length} total` });
+    checks.push({ cat:'Subdomains', label:'Live Subdomains',       status: live ? 'warn' : 'pass',     detail: `${live} live` });
+    checks.push({ cat:'Subdomains', label:'Weak TLS Subdomains',   status: weak ? 'fail' : 'pass',     detail: weak ? `${weak} with weak TLS` : 'None' });
+  }
+
+  // Group by category
+  const cats = [...new Set(checks.map(c => c.cat))];
+  const iconMap = { pass:' ✅', fail:' ❌', warn:' ⚠️', info:' ℹ️' };
+
+  const catHtml = cats.map(cat => {
+    const rows = checks.filter(c => c.cat === cat).map(c => `
+      <div class="check-row is-${c.status}">
+        <span class="check-icon">${iconMap[c.status]||''}</span>
+        <span class="check-label">${c.label}</span>
+        <span class="check-detail" title="${c.detail}">${c.detail}</span>
+      </div>`).join('');
+    return `<div class="overview-category"><div class="overview-cat-title">${cat}</div>${rows}</div>`;
+  }).join('');
+
+  return `<div class="overview-grid">${scoreBreakdown}${catHtml}</div>`;
+}
+
+// ---- TLS Tab ----
+function renderTLS(d) {
+  if (!d.tls_versions?.length) return '<div class="empty-state">No TLS data available</div>';
+  const versions = d.tls_versions.map(v => `<tr>
+    <td>${v.version}</td>
+    <td>${v.supported ? '✅ Yes' : '❌ No'}</td>
+    <td>${v.is_insecure ? '<span class="risk-critical">Insecure</span>' : v.is_deprecated ? '<span class="risk-high">Deprecated</span>' : '<span class="risk-none">OK</span>'}</td>
+    <td class="muted">${v.notes||''}</td>
+  </tr>`).join('');
+
+  const cert = d.certificate;
+  const certHtml = cert ? `
+    <div class="sub-title">Certificate</div>
+    <div class="kv-grid">
+      <div class="kv-item"><span class="kv-key">Subject</span><span class="kv-val">${cert.subject_cn}</span></div>
+      <div class="kv-item"><span class="kv-key">Issuer</span><span class="kv-val">${cert.issuer_cn}</span></div>
+      <div class="kv-item"><span class="kv-key">Algorithm</span><span class="kv-val">${cert.public_key_algorithm} ${cert.public_key_size}b</span></div>
+      <div class="kv-item"><span class="kv-key">Expires</span><span class="kv-val ${cert.is_expired?'risk-critical':''}">${cert.not_after||'?'} ${cert.is_expired?'⚠ EXPIRED':''}</span></div>
+      <div class="kv-item"><span class="kv-key">Self-Signed</span><span class="kv-val">${cert.is_self_signed?'⚠ Yes':'No'}</span></div>
+      <div class="kv-item"><span class="kv-key">Quantum Risk</span><span class="kv-val risk-${cert.quantum_risk.toLowerCase()}">${cert.quantum_risk}</span></div>
+      <div class="kv-item"><span class="kv-key">SANs</span><span class="kv-val">${(cert.san_entries||[]).join(', ')}</span></div>
+    </div>` : '';
+
+  const kex = d.key_exchange;
+  const kexHtml = kex ? `
+    <div class="sub-title">Key Exchange</div>
+    <div class="kv-grid">
+      <div class="kv-item"><span class="kv-key">Algorithm</span><span class="kv-val">${kex.algorithm}</span></div>
+      <div class="kv-item"><span class="kv-key">Key Size</span><span class="kv-val">${kex.key_size} bits</span></div>
+      <div class="kv-item"><span class="kv-key">Post-Quantum</span><span class="kv-val">${kex.is_post_quantum?'✅ Yes':'❌ No'}</span></div>
+      <div class="kv-item"><span class="kv-key">Quantum Risk</span><span class="kv-val risk-${kex.quantum_risk.toLowerCase()}">${kex.quantum_risk}</span></div>
+      <div class="kv-item"><span class="kv-key">NIST Standard</span><span class="kv-val">${kex.nist_standard||'None'}</span></div>
+    </div>` : '';
+
+  const ciphers = (d.ciphers||[]).map(c=>`<tr>
+    <td class="mono small">${c.iana_name}</td>
+    <td>${c.key_exchange}</td>
+    <td>${c.encryption}</td>
+    <td>${c.is_forward_secret?'✅':'❌'}</td>
+    <td class="risk-${c.quantum_risk.toLowerCase()}">${c.quantum_risk}</td>
+  </tr>`).join('');
+
+  return `
+    <div class="sub-title">TLS Versions</div>
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Version</th><th>Supported</th><th>Status</th><th>Notes</th></tr></thead><tbody>${versions}</tbody></table></div>
+    ${certHtml}${kexHtml}
+    <div class="sub-title">Cipher Suites</div>
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Cipher Suite</th><th>Key Exchange</th><th>Encryption</th><th>PFS</th><th>Risk</th></tr></thead><tbody>${ciphers}</tbody></table></div>`;
+}
+
+// ---- SSH Tab ----
+function renderSSH(d) {
+  const r = d.ssh_result;
+  if (!r) return '<div class="empty-state">SSH surface not scanned or port 22 closed</div>';
+  if (r.error && !r.host_key_algorithms?.length) return `<div class="empty-state">SSH error: ${r.error}</div>`;
+
+  const riskBadge = `<span class="risk-${r.overall_risk.toLowerCase()}">${r.overall_risk}</span>`;
+  const banner = r.server_banner ? `<div class="info-pill">🖥 ${r.server_banner}</div>` : '';
+
+  const hkRows = (r.host_key_algorithms||[]).map(a=>`<tr>
+    <td class="mono small">${a.name}</td>
+    <td class="risk-${a.quantum_risk.toLowerCase()}">${a.quantum_risk}</td>
+    <td class="muted small">${a.notes}</td>
+  </tr>`).join('');
+
+  const kexRows = (r.kex_algorithms||[]).map(a=>`<tr>
+    <td class="mono small">${a.name}</td>
+    <td class="risk-${a.quantum_risk.toLowerCase()}">${a.quantum_risk}</td>
+    <td class="muted small">${a.notes}</td>
+  </tr>`).join('');
+
+  return `
+    <div class="surface-header">${banner}<span class="surface-risk">Overall Risk: ${riskBadge}</span></div>
+    <div class="sub-title">Host Key Algorithms</div>
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Algorithm</th><th>Quantum Risk</th><th>Notes</th></tr></thead><tbody>${hkRows||'<tr><td colspan="3" class="muted">None detected</td></tr>'}</tbody></table></div>
+    <div class="sub-title">KEX Algorithms</div>
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Algorithm</th><th>Quantum Risk</th><th>Notes</th></tr></thead><tbody>${kexRows||'<tr><td colspan="3" class="muted">None detected</td></tr>'}</tbody></table></div>
+    <div class="sub-title">Encryption Ciphers</div>
+    <div class="enc-pills">${(r.encryption_algorithms||[]).map(e=>`<span class="enc-pill">${e}</span>`).join('')||'None'}</div>
+    <div class="note-box">${r.notes||''}</div>`;
+}
+
+// ---- DNSSEC Tab ----
+function renderDNSSEC(d) {
+  const r = d.dnssec_result;
+  if (!r) return '<div class="empty-state">DNSSEC surface not scanned</div>';
+  return `
+    <div class="kv-grid">
+      <div class="kv-item"><span class="kv-key">DNSSEC Enabled</span><span class="kv-val">${r.enabled?'✅ Yes':'❌ No'}</span></div>
+      <div class="kv-item"><span class="kv-key">Chain Valid</span><span class="kv-val">${r.chain_valid?'✅ Yes':'❌ No'}</span></div>
+      <div class="kv-item"><span class="kv-key">DS Record</span><span class="kv-val">${r.ds_record_found?'✅ Found':'❌ Missing'}</span></div>
+      <div class="kv-item"><span class="kv-key">RRSIG Found</span><span class="kv-val">${r.rrsig_found?'✅ Yes':'❌ No'}</span></div>
+      <div class="kv-item"><span class="kv-key">DNSKEY Algorithm</span><span class="kv-val">${r.dnskey_algorithm||'N/A'}</span></div>
+      <div class="kv-item"><span class="kv-key">Algorithm Quantum-Safe</span><span class="kv-val">${r.dnskey_algorithm_safe?'✅ Yes':'❌ No'}</span></div>
+      <div class="kv-item"><span class="kv-key">Quantum Risk</span><span class="kv-val risk-${r.quantum_risk.toLowerCase()}">${r.quantum_risk}</span></div>
+    </div>
+    <div class="note-box">${r.notes||r.error||''}</div>`;
+}
+
+// ---- Headers Tab ----
+function renderHeaders(d) {
+  const r = d.headers_result;
+  if (!r) return '<div class="empty-state">Headers surface not scanned</div>';
+  const score = r.security_score || 0;
+  const scoreColor2 = score>=80?'#22c55e':score>=50?'#f5a623':'#ef4444';
+
+  const rows = (r.headers_checked||[]).map(h=>`<tr>
+    <td class="mono small">${h.header_name}</td>
+    <td>${h.present?'<span class="check-pass">✅ Present</span>':'<span class="check-fail">❌ Missing</span>'}</td>
+    <td class="mono small muted">${h.value||''}</td>
+    <td class="muted small">${h.present?'':h.notes}</td>
+  </tr>`).join('');
+
+  return `
+    <div class="score-pill" style="--score-color:${scoreColor2}">
+      <span class="score-num">${score}</span><span class="score-denom">/100</span>
+      <span class="score-lbl">Headers Security Score</span>
+    </div>
+    <div class="kv-grid">
+      <div class="kv-item"><span class="kv-key">HSTS</span><span class="kv-val">${r.hsts_enabled?'✅':'❌'} ${r.hsts_max_age?'max-age='+r.hsts_max_age:''}</span></div>
+      <div class="kv-item"><span class="kv-key">HSTS Preload</span><span class="kv-val">${r.hsts_preload?'✅ Yes':'❌ No'}</span></div>
+      <div class="kv-item"><span class="kv-key">CSP</span><span class="kv-val">${r.csp_present?'✅ Present':'❌ Missing'}</span></div>
+      <div class="kv-item"><span class="kv-key">X-Frame-Options</span><span class="kv-val">${r.x_frame_options||'❌ Missing'}</span></div>
+      <div class="kv-item"><span class="kv-key">X-Content-Type</span><span class="kv-val">${r.x_content_type_options?'✅ nosniff':'❌ Missing'}</span></div>
+    </div>
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Header</th><th>Status</th><th>Value</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="note-box">${r.notes||''}</div>`;
+}
+
+// ---- CT Log Tab ----
+function renderCTLog(d) {
+  const r = d.ct_log_result;
+  if (!r) return '<div class="empty-state">CT Log surface not scanned</div>';
+  const flag = r.flagged ? `<div class="alert-box alert-critical">⚠ FLAGGED: ${r.flag_reason}</div>` : '<div class="alert-box alert-ok">✅ CT Log looks clean</div>';
+
+  const rows = (r.cert_history||[]).slice(0,20).map(c=>`<tr class="${c.is_unexpected_ca?'row-warn':''}">
+    <td class="mono small">${c.issuer_cn||'?'}</td>
+    <td>${c.not_before||'?'}</td>
+    <td>${c.not_after||'?'}</td>
+    <td>${c.is_recent?'<span class="badge-recent">Recent</span>':''}</td>
+    <td>${c.is_unexpected_ca?'<span class="badge-unexpected">⚠ Unexpected</span>':''}</td>
+  </tr>`).join('');
+
+  return `
+    ${flag}
+    <div class="kv-grid">
+      <div class="kv-item"><span class="kv-key">Total Certs</span><span class="kv-val">${r.total_certs_found}</span></div>
+      <div class="kv-item"><span class="kv-key">Recent (30d)</span><span class="kv-val ${r.recent_certs_count>2?'risk-high':''}">${r.recent_certs_count}</span></div>
+      <div class="kv-item"><span class="kv-key">Unexpected CAs</span><span class="kv-val ${r.unexpected_cas?.length?'risk-high':''}">${r.unexpected_cas?.join(', ')||'None'}</span></div>
+    </div>
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Issuer</th><th>Not Before</th><th>Not After</th><th>Recent?</th><th>Flags</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="note-box">${r.notes||''}</div>`;
+}
+
+// ---- JWT Tab ----
+function renderJWT(d) {
+  const r = d.jwt_result;
+  if (!r) return '<div class="empty-state">JWT surface not scanned</div>';
+  if (!r.jwts_found?.length) return `<div class="alert-box alert-ok">✅ No JWTs detected in response</div><div class="note-box">${r.notes||''}</div>`;
+
+  const rows = r.jwts_found.map(j=>`<tr>
+    <td class="muted small">${j.source}</td>
+    <td class="mono">${j.algorithm}</td>
+    <td class="risk-${j.quantum_risk.toLowerCase()}">${j.quantum_risk}</td>
+    <td class="muted small">${j.notes}</td>
+  </tr>`).join('');
+
+  return `
+    <div class="surface-header"><span class="surface-risk">Overall Risk: <span class="risk-${r.overall_risk.toLowerCase()}">${r.overall_risk}</span></span></div>
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Source</th><th>Algorithm</th><th>Quantum Risk</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="note-box">${r.notes||''}</div>`;
+}
+
+// ---- QUIC Tab ----
+function renderQUIC(d) {
+  const r = d.quic_result;
+  if (!r) return '<div class="empty-state">QUIC surface not scanned</div>';
+  const flag = r.flagged
+    ? '<div class="alert-box alert-warn">⚡ QUIC/HTTP3 detected — ensure TLS config covers QUIC stack</div>'
+    : '<div class="alert-box alert-ok">✅ No QUIC detected — TCP TLS scan covers full surface</div>';
+  return `
+    ${flag}
+    <div class="kv-grid">
+      <div class="kv-item"><span class="kv-key">HTTP/3 Advertised</span><span class="kv-val">${r.h3_advertised?'✅ Yes':'❌ No'}</span></div>
+      <div class="kv-item"><span class="kv-key">UDP 443 Response</span><span class="kv-val">${r.quic_detected_udp?'✅ Yes':'❌ No'}</span></div>
+      <div class="kv-item"><span class="kv-key">Alt-Svc Value</span><span class="kv-val mono small">${r.alt_svc_value||'None'}</span></div>
+      <div class="kv-item"><span class="kv-key">Versions</span><span class="kv-val">${(r.versions_advertised||[]).join(', ')||'None'}</span></div>
+    </div>
+    <div class="note-box">${r.notes||''}</div>`;
+}
+
+// ---- Subdomains Tab ----
+function renderSubdomains(d) {
+  const subs = d.subdomains || [];
+  if (!subs.length) return '<div class="empty-state">No subdomains discovered or surface not scanned</div>';
+
+  const rows = subs.map(s=>`<tr class="${s.tls_weak?'row-warn':''}">
+    <td class="mono small">${s.subdomain}</td>
+    <td class="mono muted">${s.ip_address||'—'}</td>
+    <td>${s.is_live?'<span class="check-pass">Live</span>':'<span class="check-fail">Offline</span>'}</td>
+    <td>${s.tls_weak?'<span class="risk-high">⚠ Weak</span>':s.tls_version?'<span class="risk-none">OK</span>':'—'}</td>
+    <td class="muted small">${s.tls_version||'—'}</td>
+    <td class="muted small">${s.source}</td>
+    <td class="muted small">${s.notes||''}</td>
+  </tr>`).join('');
+
+  const live = subs.filter(s=>s.is_live).length;
+  const weak = subs.filter(s=>s.tls_weak).length;
+
+  return `
+    <div class="kv-grid">
+      <div class="kv-item"><span class="kv-key">Total Discovered</span><span class="kv-val">${subs.length}</span></div>
+      <div class="kv-item"><span class="kv-key">Live</span><span class="kv-val">${live}</span></div>
+      <div class="kv-item"><span class="kv-key">Weak TLS</span><span class="kv-val ${weak?'risk-high':''}">${weak}</span></div>
+    </div>
+    <div class="table-wrap"><table class="data-table"><thead><tr><th>Subdomain</th><th>IP</th><th>Status</th><th>TLS</th><th>Version</th><th>Source</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// ============================================================
+// Vulnerabilities
+// ============================================================
+function renderVulns(d) {
+  const vulns = d.vulnerabilities || [];
+  const el = document.getElementById('vulns-list');
+  if (!vulns.length) { el.innerHTML = '<div class="empty-state">No vulnerabilities detected</div>'; return; }
+  el.innerHTML = vulns.map(v=>`
+    <div class="vuln-item sev-${v.severity.toLowerCase()}">
+      <div class="vuln-header">
+        <span class="vuln-id">${v.id}</span>
+        <span class="vuln-sev">${v.severity}</span>
+        <span class="vuln-title">${v.title}</span>
+      </div>
+      <div class="vuln-body">
+        <div class="vuln-desc">${v.description}</div>
+        <div class="vuln-rec">💡 ${v.recommendation}</div>
+        <div class="vuln-comp muted small">Component: ${v.affected_component}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ============================================================
+// CBOM
+// ============================================================
+function renderCBOM(d) {
+  const tbody = document.querySelector('#cbom-table tbody');
+  tbody.innerHTML = (d.cbom||[]).map(e=>`<tr>
+    <td class="mono small">${e.entry_id}</td>
+    <td>${e.name}</td>
+    <td class="muted small">${e.component_type}</td>
+    <td>${e.key_size||'—'}</td>
+    <td class="risk-${e.quantum_risk.toLowerCase()}">${e.quantum_risk}</td>
+    <td class="muted small">${e.recommended_replacement||'—'}</td>
+    <td class="mono muted small">${e.nist_fips_standard||'—'}</td>
+  </tr>`).join('') || '<tr><td colspan="7" class="muted">No CBOM data</td></tr>';
+}
+
+// (batch results now handled by domain selector + compare panel)
+
+// ============================================================
+// Utilities
+// ============================================================
+function toggleRaw() {
+  const w = document.getElementById('raw-json-wrap');
+  const a = document.getElementById('raw-arrow');
+  w.classList.toggle('hidden');
+  a.textContent = w.classList.contains('hidden') ? '▼' : '▲';
+}
+
+function exportJSON() {
+  if (!_lastResult) return;
+  const blob = new Blob([JSON.stringify(_lastResult,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `qsecure-${_lastResult.target.hostname}-${Date.now()}.json`;
+  a.click();
+}
+
+function showError(msg) {
+  alert('Error: ' + msg);
+  setScanLoading(false);
+  setBatchLoading(false);
+}
+
+// ============================================================
+// Boot
+// ============================================================
+init();
+</script>
+</body>
+</html>
