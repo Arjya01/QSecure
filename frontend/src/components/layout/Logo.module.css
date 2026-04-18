@@ -1,0 +1,10 @@
+.logoWrap {
+  position: relative;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.45));
+  transition: filter 0.3s;
+}
+
+.logoWrap:hover {
+  filter: drop-shadow(0 0 14px rgba(139, 92, 246, 0.7));
+}

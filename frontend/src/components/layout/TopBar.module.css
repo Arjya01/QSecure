@@ -1,0 +1,142 @@
+.topbar {
+  height: 68px;
+  background: linear-gradient(135deg, var(--bg-surface) 0%, rgba(15,23,42,0.98) 100%);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+}
+
+.titleContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pageTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.pageSub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* PQC badge */
+.platformBadge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: rgba(139,92,246,0.1);
+  border: 1px solid rgba(139,92,246,0.25);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #a78bfa;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.iconBtn {
+  color: var(--text-secondary);
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+}
+
+.iconBtn:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-surface-elevated);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 16px;
+  border-left: 1px solid var(--border-color);
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15));
+  border: 1px solid rgba(139,92,246,0.25);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.email {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roleBadge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  align-self: flex-start;
+}
+
+.logoutBtn {
+  color: var(--text-muted);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  margin-left: 4px;
+}
+
+.logoutBtn:hover {
+  color: #fca5a5;
+  background-color: rgba(239, 68, 68, 0.1);
+}

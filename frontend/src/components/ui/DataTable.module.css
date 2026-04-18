@@ -1,0 +1,98 @@
+.container {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table th {
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table td {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.clickableRow {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.clickableRow:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.emptyState {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px !important;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-surface-elevated);
+}
+
+.pageInfo {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.pageControls {
+  display: flex;
+  gap: 8px;
+}
+
+.pageControls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+
+.pageControls button:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.pageControls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

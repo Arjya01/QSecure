@@ -1,0 +1,144 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  color: var(--color-primary);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.leftCol, .rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.cardHeader {
+  margin-bottom: 20px;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.chartWrapper {
+  margin-top: 10px;
+}
+
+.quickScanForm {
+  display: flex;
+  gap: 12px;
+}
+
+.quickScanInput {
+  flex: 1;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  outline: none;
+}
+
+.quickScanInput:focus {
+  border-color: var(--color-primary);
+}
+
+.quickScanBtn {
+  background-color: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-md);
+  padding: 0 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.quickScanBtn:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+
+.quickScanBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.scansCard {
+  flex: 1;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 13px;
+}
+
+.table th {
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.emptyState {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 30px !important;
+}
+
+@media (max-width: 1024px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.scanRow:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
