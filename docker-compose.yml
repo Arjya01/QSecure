@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=sqlite:///qsecure.db
+      - SECRET_KEY=change-me-in-production-2026
+      - JWT_SECRET_KEY=jwt-secret-change-me-2026
+      - DEFAULT_ADMIN_EMAIL=admin@qsecure.local
+      - DEFAULT_ADMIN_PASSWORD=ChangeMe!2026
+    volumes:
+      - ./backend:/app
+      - db-data:/app/instance
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  db-data:

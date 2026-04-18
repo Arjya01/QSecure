@@ -1,0 +1,60 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+.Python
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# ── Environment / secrets ─────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ai_config.json holds your Groq API key — NEVER commit it.
+# Evaluators: copy backend/ai_config.json.example → backend/ai_config.json
+# and paste your free key from https://console.groq.com
+# OR just paste the key directly in the app: Admin → API Settings
+backend/ai_config.json
+
+# ── Flask / SQLite database ───────────────────────────────────────────────────
+# The DB is seeded on first run via "Load Demo Data" in Admin.
+# Do NOT commit the live database (contains password hashes).
+backend/instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Reports / generated output ────────────────────────────────────────────────
+backend/reports_output/
+*.pdf
+*.csv
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.production.local
+frontend/.env.development.local
+
+# ── Scanner cache ─────────────────────────────────────────────────────────────
+scanner/__pycache__/
+scanner/**/__pycache__/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
